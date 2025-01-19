@@ -1,0 +1,82 @@
+import pandas as pd
+import nltk
+from nltk.tokenize import word_tokenize
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
+# Import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeClassifier 
+from sklearn.metrics import accuracy_score
+import pandas as pd
+import nltk
+from nltk.tokenize import word_tokenize
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+
+# Ensure nltk resources are available
+nltk.download('punkt')
+
+# Load the Excel file (replace with the path to the uploaded file)
+file_path = '/content/EAL KS combined 20250103 AH.xlsx'
+data = pd.ExcelFile(file_path)
+
+# Load the first sheet as a DataFrame
+df = data.parse(data.sheet_names[0])
+
+# Assuming columns 'Q1' and 'A1' are for questions and answers
+question_column = 'Q1 '  # Adjust to match actual column
+answer_column = 'A1'    # Adjust to match actual column
+
+# Filter out rows with missing values in these columns
+df = df[[question_column, answer_column]].dropna()
+
+# Tokenize and preprocess questions
+def tokenize_column(column):
+    return [word_tokenize(str(text).lower()) for text in column]
+
+questions = tokenize_column(df[question_column])
+answers = df[answer_column]
+
+# Flatten tokens into a single list and one-hot encode
+unique_tokens = sorted(set(token for question in questions for token in question))
+
+# One-hot encoding dictionary for tokens
+token_to_index = {token: i for i, token in enumerate(unique_tokens)}
+
+# Encode questions into binary vectors
+def encode_question(question):
+    vector = [0] * len(unique_tokens)
+    for token in question:
+        if token in token_to_index:
+            vector[token_to_index[token]] = 1
+    return vector
+
+X = [encode_question(q) for q in questions]
+
+# Prepare answers as labels
+y = answers.values
+
+# Split data for training and testing
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+
+
+# Train a Decision Tree classifier
+model = DecisionTreeClassifier(random_state=42)  # Create DecisionTreeClassifier instance
+model.fit(X_train, y_train)                      # Train the model
+
+# Predict and evaluate
+predictions = model.predict(X_test)
+accuracy = accuracy_score(y_test, predictions)  # Corrected line
+
+print(f"Model accuracy: {accuracy:.2f}")
+
+# Example prediction
+example_question = "What is your concern?"
+tokenized_example = word_tokenize(example_question.lower())
+encoded_example = encode_question(tokenized_example)
+predicted_answer = model.predict([encoded_example])[0]
+
+print(f"Example Question: '{example_question}'")
+print(f"Predicted Answer: '{predicted_answer}'")
